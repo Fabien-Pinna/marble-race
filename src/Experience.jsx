@@ -6,6 +6,7 @@ import {
 
 import Lights from './Lights.jsx'
 import { Level } from './Level.jsx'
+import Player from './Player.jsx'
 
 export default function Experience() {
     return <>
@@ -14,8 +15,8 @@ export default function Experience() {
 
         <Physics debug>
             <Lights />
-
             <Level />
+            <Player />
         </Physics>
     </>
 }
