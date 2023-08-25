@@ -1,4 +1,5 @@
-import { useRef, useEffect } from "react"
+import * as THREE from "three"
+import { useRef, useEffect, useState } from "react"
 import { useFrame } from "@react-three/fiber"
 import { RigidBody, useRapier } from "@react-three/rapier"
 import { useKeyboardControls } from "@react-three/drei"
@@ -13,6 +14,10 @@ export const Player = () => {
 
     // hook for using raycast from rapier
     const { rapier, world } = useRapier()
+
+    // hook for smoothing the camera
+    const [smoothedCameraPosition] = useState(new THREE.Vector3(10, 10, 10))
+    const [smoothedCameraTarget] = useState(new THREE.Vector3())
 
     const rapierWorld = world
 
@@ -50,9 +55,9 @@ export const Player = () => {
         }
     }, [])
 
-    // animate the ball with keyboard controls
     useFrame((state, delta) => {
 
+        // animate the ball with keyboard controls
         // retrieve the keyboard controls
         const { forward, backward, leftward, rightward, jump } = getKeys()
 
@@ -82,9 +87,36 @@ export const Player = () => {
             torque.x += torqueStrength
         }
 
-
         body.current.applyImpulse(impulse)
         body.current.applyTorqueImpulse(torque)
+
+        // animate the camera
+        // get the current position of the ball
+        const bodyPosition = body.current.translation()
+
+        // set the initial position of the camera
+        const cameraPosition = new THREE.Vector3()
+
+        // set the camera position to the ball position
+        cameraPosition.copy(bodyPosition)
+        cameraPosition.z += 2.25
+        cameraPosition.y += 0.65
+
+        // set a target for the camera
+        const cameraTarget = new THREE.Vector3()
+
+        // set the camera target to the ball position
+        cameraTarget.copy(bodyPosition)
+        cameraTarget.y += 0.25
+
+        // smooth the camera position and target
+        smoothedCameraPosition.lerp(cameraPosition, 5 * delta)
+        smoothedCameraTarget.lerp(cameraTarget, 5 * delta)
+
+        // apply the camera position and its target
+        state.camera.position.copy(smoothedCameraPosition)
+        state.camera.lookAt(smoothedCameraTarget)
+
     })
 
     return <>
