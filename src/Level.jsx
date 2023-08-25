@@ -1,7 +1,12 @@
 import * as THREE from 'three'
-import { useRef, useState } from 'react'
+import {
+    useRef,
+    useState,
+    useMemo
+} from 'react'
 import { useFrame } from '@react-three/fiber'
-import { RigidBody } from '@react-three/rapier'
+import { RigidBody, CuboidCollider } from '@react-three/rapier'
+import { useGLTF } from '@react-three/drei'
 
 // Base for all blocks
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1)
@@ -13,7 +18,7 @@ const wallMaterial = new THREE.MeshStandardMaterial({ color: 'slategrey' })
 
 
 {/*start block */ }
-const BlockStart = ({ position = [0, 0, 0] }) => {
+export const BlockStart = ({ position = [0, 0, 0] }) => {
 
     // Block
     return <group position={position}>
@@ -28,8 +33,41 @@ const BlockStart = ({ position = [0, 0, 0] }) => {
     </group>
 }
 
+{/* End block */ }
+export const BlockEnd = ({ position = [0, 0, 0] }) => {
+
+    const hamburger = useGLTF('./hamburger.glb')
+    // Make the model castes shadows
+    hamburger.scene.children.forEach((mesh) => {
+        mesh.castShadow = true
+    })
+
+    // Block
+    return <group position={position}>
+        {/* Floor */}
+        <mesh
+            geometry={boxGeometry}
+            material={floor1Material}
+            position={[0, 0, 0]}
+            receiveShadow
+            scale={[4, 0.2, 4]}
+        />
+
+        {/* Hamburger */}
+        <RigidBody
+            type='fixed'
+            colliders='hull'
+            position={[0, 0.25, 0]}
+            restitution={0.2}
+            friction={0}
+        >
+            <primitive object={hamburger.scene} scale={0.2} />
+        </RigidBody>
+    </group>
+}
+
 {/* Spinner block */ }
-const BlockSpinner = ({ position = [0, 0, 0] }) => {
+export const BlockSpinner = ({ position = [0, 0, 0] }) => {
 
     // Get a random value for the rotation speed, and add 0.2 to have a minimum speed. Then multiply by -1 or 1 to have a random direction
     const [speed] = useState(() => (Math.random() + 0.2) * (Math.random() < 0.5 ? -1 : 1))
@@ -76,7 +114,7 @@ const BlockSpinner = ({ position = [0, 0, 0] }) => {
 }
 
 {/* Limbo block */ }
-const BlockLimbo = ({ position = [0, 0, 0] }) => {
+export const BlockLimbo = ({ position = [0, 0, 0] }) => {
 
     // Get a random value for the elevation speed, and multiply it by Pi * 2
     const [timeOffset] = useState(() => Math.random() * Math.PI * 2)
@@ -126,7 +164,7 @@ const BlockLimbo = ({ position = [0, 0, 0] }) => {
 }
 
 {/* Axe block */ }
-const BlockAxe = ({ position = [0, 0, 0] }) => {
+export const BlockAxe = ({ position = [0, 0, 0] }) => {
 
     // Get a random value for the elevation speed, and multiply it by Pi * 2
     const [timeOffset] = useState(() => Math.random() * Math.PI * 2)
@@ -175,14 +213,76 @@ const BlockAxe = ({ position = [0, 0, 0] }) => {
     </group>
 }
 
-// Level
-const Level = () => {
+// Walls
+export const Bounds = ({ length = 1 }) => {
     return <>
-        <BlockStart position={[0, 0, 12]} />
-        <BlockSpinner position={[0, 0, 8]} />
-        <BlockLimbo position={[0, 0, 4]} />
-        <BlockAxe position={[0, 0, 0]} />
+        <RigidBody type='fixed' restitution={0.2} friction={0} >
+            {/* right */}
+            <mesh
+                position={[2.15, 0.75, -(length * 2) + 2]}
+                geometry={boxGeometry}
+                material={wallMaterial}
+                scale={[0.3, 1.5, length * 4]}
+                castShadow
+            />
+            {/* left */}
+            <mesh
+                position={[-2.15, 0.75, -(length * 2) + 2]}
+                geometry={boxGeometry}
+                material={wallMaterial}
+                scale={[0.3, 1.5, length * 4]}
+                receiveShadow
+            />
+            {/* back */}
+            <mesh
+                position={[0, 0.75, -(length * 4) + 2]}
+                geometry={boxGeometry}
+                material={wallMaterial}
+                scale={[4, 1.5, 0.3]}
+                receiveShadow
+            />
+            <CuboidCollider
+                args={[2, 0.1, length * 2]}
+                position={[0, -0.1, -(length * 2) + 2]}
+                restitution={0.2}
+                friction={1}
+            />
+        </RigidBody>
     </>
 }
 
-export default Level
+// Level
+export const Level = ({
+    // Number of blocks
+    count = 5,
+    // Block types
+    types = [BlockSpinner, BlockLimbo, BlockAxe]
+}) => {
+
+    // Blocks
+    const blocks = useMemo(() => {
+        const blocks = []
+
+        // Loop through the number of blocks
+        for (let i = 0; i < count; i++) {
+            // Get a random block type
+            const type = types[Math.floor(Math.random() * types.length)]
+            blocks.push(type)
+        }
+        return blocks
+    }, [count, types])
+
+    return <>
+        <BlockStart position={[0, 0, 0]} />
+
+        {/* Loop through the blocks */}
+        {blocks.map((Block, index) =>
+            <Block key={index} position={[0, 0, -(index + 1) * 4]} />
+        )}
+
+        <BlockEnd position={[0, 0, -(count + 1) * 4]} />
+
+        {/* Walls */}
+        <Bounds length={count + 2} />
+    </>
+}
