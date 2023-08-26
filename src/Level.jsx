@@ -6,7 +6,7 @@ import {
 } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
-import { useGLTF } from '@react-three/drei'
+import { useGLTF, Float, Text } from '@react-three/drei'
 
 // Base for all blocks
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1)
@@ -22,6 +22,20 @@ export const BlockStart = ({ position = [0, 0, 0] }) => {
 
     // Block
     return <group position={position}>
+        <Float floatIntensity={0.25} rotationIntensity={0.25} >
+            <Text
+                font='./bebas-neue-v9-latin-regular.woff'
+                scale={0.35}
+                maxWidth={0.25}
+                textAlign='right'
+                position={[0.75, 0.65, 0]}
+                rotation-y={-0.25}
+            >
+                Marble Race
+                <meshBasicMaterial toneMapped={false} />
+            </Text>
+        </Float>
+
         {/* Floor */}
         <mesh
             geometry={boxGeometry}
@@ -44,6 +58,17 @@ export const BlockEnd = ({ position = [0, 0, 0] }) => {
 
     // Block
     return <group position={position}>
+        <Text
+            font='./bebas-neue-v9-latin-regular.woff'
+            scale={1}
+            position={[0, 2.25, 2]}
+
+        >
+            FINISH !
+            <meshBasicMaterial toneMapped={false} />
+
+        </Text>
+
         {/* Floor */}
         <mesh
             geometry={boxGeometry}
@@ -255,6 +280,7 @@ export const Bounds = ({ length = 1 }) => {
 export const Level = ({
     // Number of blocks
     count = 5,
+    seed = 0,
     // Block types
     types = [BlockSpinner, BlockLimbo, BlockAxe]
 }) => {
@@ -270,7 +296,7 @@ export const Level = ({
             blocks.push(type)
         }
         return blocks
-    }, [count, types])
+    }, [count, types, seed])
 
     return <>
         <BlockStart position={[0, 0, 0]} />

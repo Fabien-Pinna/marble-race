@@ -3,23 +3,28 @@ import { useRef, useEffect, useState } from "react"
 import { useFrame } from "@react-three/fiber"
 import { RigidBody, useRapier } from "@react-three/rapier"
 import { useKeyboardControls } from "@react-three/drei"
+import useGame from "./stores/useGame"
 
 
-export const Player = () => {
+const Player = () => {
 
     const body = useRef()
 
     // hook for using keyboard controls
-    const [sucribeKeys, getKeys] = useKeyboardControls()
+    const [subscribeKeys, getKeys] = useKeyboardControls()
 
     // hook for using raycast from rapier
     const { rapier, world } = useRapier()
+    const rapierWorld = world
 
     // hook for smoothing the camera
     const [smoothedCameraPosition] = useState(new THREE.Vector3(10, 10, 10))
     const [smoothedCameraTarget] = useState(new THREE.Vector3())
 
-    const rapierWorld = world
+    const start = useGame((state) => state.start)
+    const end = useGame((state) => state.end)
+    const restart = useGame((state) => state.restart)
+    const blocksCount = useGame((state) => state.blocksCount)
 
     // jump function
     const jump = () => {
@@ -36,10 +41,25 @@ export const Player = () => {
             body.current.applyImpulse({ x: 0, y: 0.5, z: 0 })
     }
 
+    // reset function
+    const reset = () => {
+        body.current.setTranslation({ x: 0, y: 1, z: 0 })
+        body.current.setLinvel({ x: 0, y: 0, z: 0 })
+        body.current.setAngvel({ x: 0, y: 0, z: 0 })
+    }
+
     // subscribe to the jump key
     useEffect(() => {
-        const unsubscribeJump = sucribeKeys(
+        // We unsubscribe from any event before subscribing to a new one
+        const unsubscribeReset = useGame.subscribe(
+            (state) => state.phase,
+            (value) => {
+                if (value === 'ready')
+                    reset()
+            }
+        )
 
+        const unsubscribeJump = subscribeKeys(
             // Selector
             (state) => state.jump,
 
@@ -50,8 +70,16 @@ export const Player = () => {
                 }
             }
         )
+        // subscribe to any key and listen wich phase of game it is
+        const unsubscribeAny = subscribeKeys(() => {
+            start()
+        })
+
+        // Clean up function
         return () => {
             unsubscribeJump()
+            unsubscribeAny()
+            unsubscribeReset()
         }
     }, [])
 
@@ -116,6 +144,16 @@ export const Player = () => {
         // apply the camera position and its target
         state.camera.position.copy(smoothedCameraPosition)
         state.camera.lookAt(smoothedCameraTarget)
+
+        /**
+         * Phases
+         */
+        if (bodyPosition.z < -(blocksCount * 4 + 2))
+            end()
+
+        if (bodyPosition.y < -4)
+            restart()
+
 
     })
 
